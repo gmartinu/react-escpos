@@ -14,9 +14,9 @@
     "build:watch": "tsc --watch",
     "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "release:patch": "npm version patch && git push --follow-tags",
-    "release:minor": "npm version minor && git push --follow-tags",
-    "release:major": "npm version major && git push --follow-tags"
+    "release:patch": "npm version patch && git push",
+    "release:minor": "npm version minor && git push",
+    "release:major": "npm version major && git push"
   },
   "keywords": [
     "escpos",
