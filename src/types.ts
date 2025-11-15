@@ -2,6 +2,8 @@
  * Type definitions for react-escpos converter
  */
 
+import type { RendererAdapter, ComponentMapping } from './adapters';
+
 export interface ConversionOptions {
   paperWidth?: number; // Width in characters (default: 48 for 80mm thermal)
   encoding?: string; // Character encoding (default: 'utf-8')
@@ -9,6 +11,7 @@ export interface ConversionOptions {
   imageMode?: 'column' | 'raster'; // Image printing mode
   cut?: boolean | 'full' | 'partial'; // Cut paper after printing (default: 'full')
   feedBeforeCut?: number; // Lines to feed before cutting (default: 3)
+  adapter?: RendererAdapter | ComponentMapping; // Custom adapter or component mapping (default: ReactPDFAdapter)
 }
 
 export interface ESCPOSCommand {

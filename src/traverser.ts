@@ -1,6 +1,7 @@
 import { ESCPOSGenerator } from "./generator";
 import { alignTextInColumn, extractTextStyle, extractViewStyle, mapTextAlign, mergeStyles, parseWidth } from "./styles";
 import { ElementNode } from "./types";
+import { RendererAdapter, ReactPDFAdapter } from "./adapters";
 
 /**
  * Tree Traverser
@@ -8,9 +9,12 @@ import { ElementNode } from "./types";
  */
 export class TreeTraverser {
   private generator: ESCPOSGenerator;
+  private adapter: RendererAdapter;
 
-  constructor(generator: ESCPOSGenerator) {
+  constructor(generator: ESCPOSGenerator, adapter?: RendererAdapter) {
     this.generator = generator;
+    // Use provided adapter or default to ReactPDFAdapter for backward compatibility
+    this.adapter = adapter || new ReactPDFAdapter();
   }
 
   /**
@@ -19,8 +23,8 @@ export class TreeTraverser {
   async traverse(node: ElementNode | null): Promise<void> {
     if (!node) return;
 
-    // Normalize type to lowercase for case-insensitive matching
-    const nodeType = node.type.toLowerCase();
+    // Normalize type using adapter (supports custom component names)
+    const nodeType = this.adapter.normalizeElementType(node.type);
 
     switch (nodeType) {
       case "document":
@@ -186,7 +190,8 @@ export class TreeTraverser {
    * Find the first Text node in a tree
    */
   private findFirstTextNode(node: ElementNode): ElementNode | null {
-    if (node.type === "Text") {
+    const normalizedType = this.adapter.normalizeElementType(node.type);
+    if (normalizedType === "text") {
       return node;
     }
 
@@ -204,7 +209,8 @@ export class TreeTraverser {
   private async collectTextContent(node: ElementNode): Promise<string> {
     let text = "";
 
-    if (node.type === "Text" || node.type === "TextNode") {
+    const normalizedType = this.adapter.normalizeElementType(node.type);
+    if (normalizedType === "text" || normalizedType === "textnode") {
       // Get text from props.children
       if (node.props.children !== undefined) {
         text += String(node.props.children);

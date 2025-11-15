@@ -3,6 +3,7 @@ import { ESCPOSGenerator } from "./generator";
 import { renderToElementTree } from "./renderer";
 import { TreeTraverser } from "./traverser";
 import { ConversionOptions } from "./types";
+import { createAdapter } from "./adapters";
 
 /**
  * Main conversion function: Converts React component to ESC/POS commands
@@ -13,11 +14,23 @@ import { ConversionOptions } from "./types";
  *
  * @example
  * ```typescript
+ * // Using default @react-pdf/renderer components
  * const commands = await convertToESCPOS(
- *   <Receipt data={data} />,
+ *   <Document><Page><Text>Hello</Text></Page></Document>,
  *   { paperWidth: 48, debug: true }
  * );
- * // Send commands to printer or save to file for testing
+ *
+ * // Using custom component mapping
+ * const commands = await convertToESCPOS(
+ *   <Receipt><Item>Product</Item></Receipt>,
+ *   {
+ *     paperWidth: 48,
+ *     adapter: {
+ *       Receipt: 'document',
+ *       Item: 'text'
+ *     }
+ *   }
+ * );
  * ```
  */
 export async function convertToESCPOS(component: ReactElement, options?: ConversionOptions): Promise<Buffer> {
@@ -27,20 +40,24 @@ export async function convertToESCPOS(component: ReactElement, options?: Convers
     debug = false,
     cut = "full", // Default to full cut (ESC i)
     feedBeforeCut = 3, // Default to 3 lines feed before cut
+    adapter: adapterConfig, // Custom adapter or component mapping
   } = options || {};
 
-  // Step 1: Render React component to element tree
-  const elementTree = renderToElementTree(component);
+  // Step 1: Create adapter (defaults to ReactPDFAdapter if not provided)
+  const adapter = createAdapter(adapterConfig);
+
+  // Step 2: Render React component to element tree
+  const elementTree = renderToElementTree(component, adapter);
 
   if (!elementTree) {
     throw new Error("Failed to render component to element tree");
   }
 
-  // Step 2: Create ESC/POS generator
+  // Step 3: Create ESC/POS generator
   const generator = new ESCPOSGenerator(paperWidth, encoding, debug);
 
-  // Step 3: Traverse tree and generate commands
-  const traverser = new TreeTraverser(generator);
+  // Step 4: Traverse tree and generate commands
+  const traverser = new TreeTraverser(generator, adapter);
   await traverser.traverse(elementTree);
 
   // Step 3.5: Add cut command if requested
@@ -66,3 +83,4 @@ export { TreeTraverser } from "./traverser";
 export * from "./types";
 export * from "./encodings/cp860";
 export * from "./commands/escpos";
+export * from "./adapters";

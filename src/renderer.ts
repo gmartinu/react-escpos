@@ -1,9 +1,12 @@
 import ReactTestRenderer from 'react-test-renderer';
 import { ReactElement } from 'react';
 import { ElementNode } from './types';
+import { RendererAdapter, ReactPDFAdapter } from './adapters';
 
 /**
  * Renders a React component to a test renderer instance
+ * @deprecated This function is kept for backward compatibility but is no longer used internally.
+ * The adapter system now handles rendering.
  */
 export function renderComponent(component: ReactElement): ReactTestRenderer.ReactTestRenderer {
   return ReactTestRenderer.create(component);
@@ -11,6 +14,8 @@ export function renderComponent(component: ReactElement): ReactTestRenderer.Reac
 
 /**
  * Converts a ReactTestRenderer node to our ElementNode structure
+ * @deprecated This function is kept for backward compatibility but is no longer used internally.
+ * The adapter system now handles node conversion.
  */
 export function convertToElementNode(node: any): ElementNode | null {
   if (!node) return null;
@@ -64,11 +69,18 @@ export function convertToElementNode(node: any): ElementNode | null {
 }
 
 /**
- * Renders a React component and converts it to an ElementNode tree
+ * Renders a React component and converts it to an ElementNode tree using the provided adapter.
+ *
+ * @param component - The React component to render
+ * @param adapter - The renderer adapter to use (defaults to ReactPDFAdapter for backward compatibility)
+ * @returns The rendered element tree, or null if rendering fails
  */
-export function renderToElementTree(component: ReactElement): ElementNode | null {
-  const renderer = renderComponent(component);
-  const tree = renderer.toJSON();
+export function renderToElementTree(
+  component: ReactElement,
+  adapter?: RendererAdapter
+): ElementNode | null {
+  // Use provided adapter or default to ReactPDFAdapter for backward compatibility
+  const rendererAdapter = adapter || new ReactPDFAdapter();
 
-  return convertToElementNode(tree);
+  return rendererAdapter.renderToTree(component);
 }

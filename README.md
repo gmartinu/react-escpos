@@ -105,10 +105,160 @@ interface ConversionOptions {
   debug?: boolean; // Enable debug output (default: false)
   cut?: boolean | "full" | "partial"; // Paper cutting (default: 'full')
   feedBeforeCut?: number; // Lines to feed before cut (default: 3)
+  adapter?: RendererAdapter | ComponentMapping; // Custom adapter or component mapping (default: ReactPDFAdapter)
 }
 ```
 
 **Returns:** `Promise<Buffer>` - ESC/POS command buffer ready to send to printer
+
+## Adapter System
+
+react-escpos now supports a flexible **adapter system** that allows you to use custom component names instead of being tied to `@react-pdf/renderer` components. This makes it easier to create thermal printer-specific React components while maintaining the same ESC/POS output.
+
+### Default Behavior (Backward Compatible)
+
+By default, react-escpos uses the `ReactPDFAdapter` which supports `@react-pdf/renderer` components:
+
+```typescript
+// No adapter needed - uses ReactPDFAdapter by default
+const buffer = await convertToESCPOS(
+  <Document>
+    <Page>
+      <Text>Hello World</Text>
+    </Page>
+  </Document>
+);
+```
+
+### Custom Component Mapping
+
+You can map your own component names to standard element types using a simple configuration object:
+
+```typescript
+// Define your custom components
+const Receipt = ({ children }) => <div>{children}</div>;
+const Header = ({ children }) => <div>{children}</div>;
+const ItemRow = ({ children }) => <div>{children}</div>;
+const Label = ({ children }) => <span>{children}</span>;
+const Price = ({ children }) => <span>{children}</span>;
+
+// Create your receipt
+const MyReceipt = (
+  <Receipt>
+    <Header>
+      <Label>My Store</Label>
+    </Header>
+    <ItemRow>
+      <Label>Product A</Label>
+      <Price>$10.00</Price>
+    </ItemRow>
+  </Receipt>
+);
+
+// Convert with custom component mapping
+const buffer = await convertToESCPOS(MyReceipt, {
+  paperWidth: 48,
+  adapter: {
+    Receipt: 'document',
+    Header: 'view',
+    ItemRow: 'view',
+    Label: 'text',
+    Price: 'text',
+  }
+});
+```
+
+### Standard Element Types
+
+Your custom components must map to one of these standard types:
+
+- `document` - Top-level container (like `<Document>`)
+- `page` - Page container (like `<Page>`)
+- `view` - Layout container (like `<View>`)
+- `text` - Text content (like `<Text>`)
+- `image` - Image element (like `<Image>`)
+
+### Advanced: Custom Adapter Class
+
+For more control, you can create a custom adapter class:
+
+```typescript
+import { CustomAdapter } from 'react-escpos';
+
+const myAdapter = new CustomAdapter({
+  Receipt: 'document',
+  Header: 'view',
+  Item: 'text',
+  // ... more mappings
+});
+
+const buffer = await convertToESCPOS(<MyComponent />, {
+  adapter: myAdapter
+});
+```
+
+### Benefits of Custom Components
+
+1. **Semantic names** - Use `<Receipt>` instead of `<Document>`, `<ItemRow>` instead of `<View>`
+2. **No react-pdf dependency** - Create components without installing `@react-pdf/renderer`
+3. **Thermal printer specific** - Build components designed for thermal printers from the start
+4. **Future extensibility** - Foundation for custom thermal printer component libraries
+
+### Example: Complete Custom Receipt Component
+
+```typescript
+import { convertToESCPOS } from 'react-escpos';
+
+// Custom thermal printer components
+const Receipt = ({ children }) => <div>{children}</div>;
+const Store = ({ name, children }) => (
+  <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 20 }}>
+    {name}
+    {children}
+  </div>
+);
+const Divider = () => <div style={{ borderBottom: '1px solid black' }} />;
+const Item = ({ label, price }) => (
+  <div style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+    <span>{label}</span>
+    <span>${price.toFixed(2)}</span>
+  </div>
+);
+const Total = ({ amount }) => (
+  <div style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+    <span style={{ fontWeight: 'bold' }}>TOTAL</span>
+    <span style={{ fontWeight: 'bold' }}>${amount.toFixed(2)}</span>
+  </div>
+);
+
+// Build your receipt
+const MyReceipt = (
+  <Receipt>
+    <Store name="Coffee Shop">
+      <p>123 Main St</p>
+    </Store>
+    <Divider />
+    <Item label="Espresso" price={3.50} />
+    <Item label="Croissant" price={4.00} />
+    <Divider />
+    <Total amount={7.50} />
+  </Receipt>
+);
+
+// Convert with component mapping
+const buffer = await convertToESCPOS(MyReceipt, {
+  adapter: {
+    Receipt: 'document',
+    Store: 'text',
+    Divider: 'view',
+    Item: 'view',
+    Total: 'view',
+    p: 'text',
+    div: 'view',
+    span: 'text',
+  }
+});
+```
 
 ## Supported Elements
 
@@ -339,6 +489,18 @@ import {
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Publishing
+
+This package is automatically published to npm and GitHub Packages when changes are pushed to the `main` branch.
+
+For maintainers:
+- **Automated publishing** - Just bump the version in `package.json` and push to main
+- **Version tagging** - Git tags are created automatically
+- **Dual registry** - Published to both npm and GitHub Packages
+- **Release notes** - GitHub Releases are created automatically
+
+See [PUBLISHING.md](./PUBLISHING.md) for detailed publishing instructions and setup.
 
 ## License
 

@@ -1,0 +1,129 @@
+name: Publish to npm and GitHub Packages
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write  # Required for npm trusted publishing (OIDC)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for tag checking
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Get package version
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Package version: $VERSION"
+
+      - name: Check if tag exists
+        id: check-tag
+        run: |
+          if git rev-parse "v${{ steps.package-version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Tag v${{ steps.package-version.outputs.version }} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "✅ Tag v${{ steps.package-version.outputs.version }} does not exist"
+          fi
+
+      - name: Install dependencies
+        if: steps.check-tag.outputs.exists == 'false'
+        run: npm ci
+
+      - name: Build package
+        if: steps.check-tag.outputs.exists == 'false'
+        run: npm run build
+
+      - name: Create Git tag
+        if: steps.check-tag.outputs.exists == 'false'
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a "v${{ steps.package-version.outputs.version }}" -m "Release v${{ steps.package-version.outputs.version }}"
+          git push origin "v${{ steps.package-version.outputs.version }}"
+          echo "🏷️ Created and pushed tag v${{ steps.package-version.outputs.version }}"
+
+      - name: Publish to npm (with provenance)
+        if: steps.check-tag.outputs.exists == 'false'
+        run: npm publish --access public --provenance
+
+      - name: Setup Node.js for GitHub Packages
+        if: steps.check-tag.outputs.exists == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@gmartinu'
+
+      - name: Publish to GitHub Packages
+        if: steps.check-tag.outputs.exists == 'false'
+        run: |
+          # Update package.json name to include scope for GitHub Packages
+          node -e "
+            const fs = require('fs');
+            const pkg = require('./package.json');
+            pkg.name = '@gmartinu/react-escpos';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+          "
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.check-tag.outputs.exists == 'false'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.package-version.outputs.version }}
+          release_name: Release v${{ steps.package-version.outputs.version }}
+          body: |
+            ## 🚀 Release v${{ steps.package-version.outputs.version }}
+
+            This release has been automatically published to:
+            - 📦 [npm](https://www.npmjs.com/package/react-escpos)
+            - 📦 [GitHub Packages](https://github.com/gmartinu/react-escpos/packages)
+
+            ### Installation
+            ```bash
+            npm install react-escpos@${{ steps.package-version.outputs.version }}
+            ```
+
+            See the [CHANGELOG](https://github.com/gmartinu/react-escpos/blob/main/CHANGELOG.md) for details.
+          draft: false
+          prerelease: false
+
+      - name: Publish Summary
+        if: steps.check-tag.outputs.exists == 'false'
+        run: |
+          echo "## ✅ Published v${{ steps.package-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 npm: https://www.npmjs.com/package/react-escpos" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 GitHub Packages: https://github.com/gmartinu/react-escpos/packages" >> $GITHUB_STEP_SUMMARY
+          echo "- 🏷️ Tag: v${{ steps.package-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 📝 Release: https://github.com/gmartinu/react-escpos/releases/tag/v${{ steps.package-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Skip Summary
+        if: steps.check-tag.outputs.exists == 'true'
+        run: |
+          echo "## ⏭️ Skipped Publishing" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Version v${{ steps.package-version.outputs.version }} has already been published." >> $GITHUB_STEP_SUMMARY
+          echo "Bump the version in package.json to publish a new release." >> $GITHUB_STEP_SUMMARY
