@@ -7,6 +7,7 @@ import {
   encodeText,
   feedLines,
   generateQRCode,
+  generateRasterImage,
   INIT,
   setLineSpacing,
 } from "./commands/escpos";
@@ -209,14 +210,93 @@ export class ESCPOSGenerator {
   }
 
   /**
-   * Add image from base64 or URL
-   * Note: Image printing is complex and printer-specific
-   * This is a placeholder for future implementation
+   * Add image from base64 or data URI
+   * Converts image to monochrome bitmap and prints using ESC/POS raster graphics
+   * @param source - Base64 string, data URI, or object with uri property
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async addImage(source: string | { uri: string }): Promise<void> {
-    // TODO: Implement image conversion to ESC/POS raster graphics
-    // This requires converting image to monochrome bitmap and using GS v 0 command
+    try {
+      // Import Jimp dynamically to avoid loading if not needed
+      const { Jimp } = await import("jimp");
+
+      // Extract the actual data URI or base64 string
+      let imageSource: string;
+      if (typeof source === "string") {
+        imageSource = source;
+      } else if (source && typeof source === "object" && "uri" in source) {
+        imageSource = source.uri;
+      } else {
+        console.warn("Invalid image source format");
+        return;
+      }
+
+      // Handle base64 strings (with or without data URI prefix)
+      let base64Data = imageSource;
+      if (imageSource.startsWith("data:")) {
+        // Extract base64 from data URI (e.g., "data:image/png;base64,...")
+        const base64Match = imageSource.match(/^data:image\/\w+;base64,(.+)$/);
+        if (base64Match) {
+          base64Data = base64Match[1];
+        }
+      }
+
+      // Convert base64 to buffer
+      const imageBuffer = Buffer.from(base64Data, "base64");
+
+      // Load image with Jimp (v1.x API)
+      const image = await Jimp.read(imageBuffer);
+
+      // Get paper width in pixels (assuming 8 dots per mm for 80mm thermal printer)
+      // Standard 80mm paper = ~576 pixels at 8 dots/mm (72 dpi)
+      // We'll use 384 pixels as max width (48 chars * 8 pixels per char)
+      const maxWidth = this.context.paperWidth * 8;
+
+      // Resize image to fit paper width while maintaining aspect ratio
+      if (image.width > maxWidth) {
+        await image.resize({ w: maxWidth });
+      }
+
+      // Convert to grayscale and apply threshold to create monochrome bitmap
+      await image
+        .greyscale()
+        .contrast(0.2) // Increase contrast for better print quality
+        .posterize(2); // Convert to 2-color (black and white)
+
+      const width = image.width;
+      const height = image.height;
+
+      // Convert image to monochrome bitmap data (1 bit per pixel)
+      const bytesPerLine = Math.ceil(width / 8);
+      const bitmapData: number[] = [];
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < bytesPerLine; x++) {
+          let byte = 0;
+
+          for (let bit = 0; bit < 8; bit++) {
+            const pixelX = x * 8 + bit;
+            if (pixelX < width) {
+              const pixelIndex = (y * width + pixelX) * 4;
+              const pixel = image.bitmap.data[pixelIndex]; // Red channel (same for grayscale)
+
+              // If pixel is dark (< 128), set bit to 1 (black)
+              if (pixel < 128) {
+                byte |= 1 << (7 - bit);
+              }
+            }
+          }
+
+          bitmapData.push(byte);
+        }
+      }
+
+      // Generate and add raster image command
+      const imageCommands = generateRasterImage(bitmapData, width, height);
+      this.buffer.pushArray(imageCommands);
+    } catch (error) {
+      console.warn("Failed to process image:", error);
+      // Silently fail - don't crash if image processing fails
+    }
   }
 
   /**

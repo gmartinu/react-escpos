@@ -109,6 +109,41 @@ export const generateQRCode = (data: string, size = 6): number[] => {
 };
 
 /**
+ * Generate raster image command (GS v 0)
+ * @param imageData - Monochrome bitmap data (1 bit per pixel, 1=black, 0=white)
+ * @param width - Image width in pixels
+ * @param height - Image height in pixels
+ * @returns ESC/POS command bytes
+ */
+export const generateRasterImage = (imageData: number[], width: number, height: number): number[] => {
+  const commands: number[] = [];
+
+  // Calculate bytes per line (width in bytes, rounded up to nearest byte)
+  const bytesPerLine = Math.ceil(width / 8);
+
+  // GS v 0 m xL xH yL yH d1...dk
+  // m = 0 (normal), 1 (double width), 2 (double height), 3 (quadruple)
+  // xL xH = width in bytes (little endian)
+  // yL yH = height in dots (little endian)
+  // d1...dk = raster image data
+
+  commands.push(GS, 0x76, 0x30, 0x00); // GS v 0 m (m=0: normal)
+
+  // Width in bytes (little endian)
+  commands.push(bytesPerLine & 0xff);
+  commands.push((bytesPerLine >> 8) & 0xff);
+
+  // Height in dots (little endian)
+  commands.push(height & 0xff);
+  commands.push((height >> 8) & 0xff);
+
+  // Add image data
+  commands.push(...imageData);
+
+  return commands;
+};
+
+/**
  * Text encoding helper
  * Converts string to CP860 byte array for Brazilian Portuguese thermal printers
  */

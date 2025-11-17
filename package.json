@@ -52,12 +52,16 @@
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0"
   },
   "dependencies": {
+    "jimp": "^1.6.0",
     "react-test-renderer": "^18.2.0"
   },
   "devDependencies": {
+    "@types/jimp": "^0.2.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.4",
     "@types/react-test-renderer": "^19.1.0",
+    "serialport": "^13.0.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
   "engines": {

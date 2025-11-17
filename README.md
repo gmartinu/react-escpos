@@ -11,6 +11,7 @@ Convert React components (especially `@react-pdf/renderer` components) directly 
 - ⚡ **Faster printing** - no PDF generation overhead
 - 🎨 **Better thermal printer compatibility** - native ESC/POS commands
 - 📦 **Smaller output size** - raw ESC/POS vs PDF
+- 🖼️ **Image support** - logos, QR codes, and graphics with base64
 - 🌍 **Portuguese support** - built-in CP860 encoding
 - 🔧 **Flexible** - works with any React component structure
 - 📱 **TypeScript** - fully typed for better DX
@@ -295,6 +296,55 @@ Container with flexbox-like layout:
 </View>
 ```
 
+### Image
+
+Display logos, graphics, or QR codes using base64-encoded images:
+
+```tsx
+<Image
+  src="data:image/png;base64,iVBORw0KGgoAAAANS..."
+  style={{ width: 200, textAlign: "center" }}
+/>
+```
+
+**Features:**
+- Supports PNG, JPEG, and other common image formats
+- Automatically converts to monochrome bitmap for thermal printing
+- Resizes images to fit paper width while maintaining aspect ratio
+- Supports alignment via `textAlign` style (`left`, `center`, `right`)
+- Uses ESC/POS raster graphics (GS v 0 command)
+
+**Base64 Image Example:**
+
+```tsx
+import { Image } from "@react-pdf/renderer";
+
+const LOGO_BASE64 = "iVBORw0KGgoAAAANSUhEUgAA..."; // Your base64 string
+
+const Receipt = () => (
+  <Document>
+    <Page>
+      <View>
+        {/* Centered logo */}
+        <Image
+          src={`data:image/png;base64,${LOGO_BASE64}`}
+          style={{ width: 150, textAlign: "center" }}
+        />
+        <Text style={{ textAlign: "center" }}>My Store</Text>
+      </View>
+    </Page>
+  </Document>
+);
+```
+
+**How it works:**
+1. Image is loaded from base64 data URI
+2. Converted to grayscale
+3. Contrast enhanced for better print quality
+4. Posterized to pure black and white
+5. Converted to ESC/POS raster bitmap format
+6. Sent to printer with proper alignment
+
 ### Document & Page
 
 Top-level containers (automatically handled).
@@ -467,12 +517,87 @@ socket.write(buffer);
 socket.end();
 ```
 
+## Image Support
+
+### Generating Base64 Images
+
+You can convert any image to base64 for use in receipts:
+
+```typescript
+import fs from 'fs';
+
+// From file
+const imageBuffer = fs.readFileSync('logo.png');
+const base64 = imageBuffer.toString('base64');
+
+// Use in component
+<Image src={`data:image/png;base64,${base64}`} />
+```
+
+### Image Best Practices
+
+1. **Size**: Keep images small (max 384 pixels wide for 48-char paper)
+2. **Format**: PNG or JPEG work best
+3. **Colors**: Images are automatically converted to black and white
+4. **Contrast**: High contrast images print better
+5. **Alignment**: Use `textAlign: 'center'` for centered logos
+
+### Example: Receipt with Logo
+
+```tsx
+const ReceiptWithLogo = ({ data, logoBase64 }) => (
+  <Document>
+    <Page>
+      <View>
+        {/* Centered logo at top */}
+        <Image
+          src={`data:image/png;base64,${logoBase64}`}
+          style={{ width: 150, textAlign: "center" }}
+        />
+
+        {/* Store info */}
+        <Text style={{ textAlign: "center", fontWeight: "bold" }}>
+          {data.storeName}
+        </Text>
+        <Text style={{ textAlign: "center" }}>{data.address}</Text>
+
+        <View style={{ borderBottom: "1px solid black" }} />
+
+        {/* Items */}
+        {data.items.map((item, i) => (
+          <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Text>{item.name}</Text>
+            <Text>${item.price.toFixed(2)}</Text>
+          </View>
+        ))}
+
+        <View style={{ borderTop: "1px solid black" }} />
+
+        {/* Total */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <Text style={{ fontWeight: "bold" }}>TOTAL:</Text>
+          <Text style={{ fontWeight: "bold" }}>${data.total.toFixed(2)}</Text>
+        </View>
+
+        <Text style={{ textAlign: "center" }}>Thank you!</Text>
+      </View>
+    </Page>
+  </Document>
+);
+
+// Usage
+const buffer = await convertToESCPOS(
+  <ReceiptWithLogo data={receiptData} logoBase64={myLogo} />,
+  { paperWidth: 48, cut: "full" }
+);
+```
+
 ## Limitations
 
-- ❌ Images not fully supported (placeholder implementation)
-- ❌ Complex nested layouts may not translate perfectly
-- ❌ Font sizes are approximated to ESC/POS sizes
+- ⚠️ Complex nested layouts may not translate perfectly
+- ⚠️ Font sizes are approximated to ESC/POS sizes
 - ⚠️ Printer-specific features may vary
+- ⚠️ Images are converted to monochrome (black and white only)
 
 ## TypeScript Support
 

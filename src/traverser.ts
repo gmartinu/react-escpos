@@ -276,7 +276,28 @@ export class TreeTraverser {
     const source = node.props.source || node.props.src;
 
     if (source) {
+      // Apply alignment from style (check both node style and parent style)
+      const style = mergeStyles(node.style);
+      const viewStyle = extractViewStyle(style);
+      const textStyle = extractTextStyle(style);
+
+      // Determine alignment from textAlign or justifyContent
+      let align: "left" | "center" | "right" = "left";
+      if (textStyle.textAlign) {
+        align = mapTextAlign(textStyle.textAlign);
+      } else if (viewStyle.justifyContent === "center" || viewStyle.alignItems === "center") {
+        align = "center";
+      } else if (viewStyle.justifyContent === "flex-end" || viewStyle.alignItems === "flex-end") {
+        align = "right";
+      }
+
+      // Set alignment before adding image
+      this.generator.setAlign(align);
+
       await this.generator.addImage(source);
+
+      // Reset alignment
+      this.generator.setAlign("left");
     }
 
     this.generator.addNewline();
