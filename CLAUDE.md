@@ -120,11 +120,16 @@ Converts React/CSS-like styles to ESC/POS commands:
 
 ### Critical Design Decisions
 
-1. **Line Spacing**: Set to 10 dots (tight spacing) by default in `generator.ts:92` for compact receipts
+1. **Line Spacing**: Set to 5 dots by default in `generator.ts:91`, but enforced to minimum 18 dots for compatibility
+   - Both ESC/POS and ESC/Bematech enforce 18-dot minimum (src/commands/escpos.ts:90, src/commands/escbematech.ts:424)
+   - This ensures consistent formatting across both protocols
+   - ESC/Bematech manual specifies 18 ≤ n ≤ 255 for ESC 3 command
 2. **Font Size Command**: Uses ESC ! (0x1B 0x21) instead of GS ! (0x1D 0x21) for better printer compatibility
    - Limited to 2x2 maximum character size (1x1, 1x2, 2x1, 2x2)
    - Combines size and bold/emphasis in a single command
    - Avoids text rendering issues on printers like Bematech MP-4200 TH
+   - **Uses Font B (bit 0 = 1) by default** - Narrower font (9×17 dots) fits more characters per line
+   - Font B prevents line wrapping on 48-character receipts (80mm thermal printers)
 3. **CP860 Encoding**: Default encoding supports Brazilian Portuguese characters (ç, á, é, etc.)
 4. **Paper Width**: Default 48 characters (80mm thermal printers). Common values:
    - 58mm = 32 chars

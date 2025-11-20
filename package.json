@@ -1,70 +1,59 @@
 {
-  "name": "react-escpos",
-  "version": "1.3.0",
-  "description": "Convert React components (especially @react-pdf/renderer) to ESC/POS thermal printer commands",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
+  "name": "@thermal-print/monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Thermal printer libraries monorepo",
   "scripts": {
-    "build": "tsc",
-    "build:watch": "tsc --watch",
-    "prepublishOnly": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "release:patch": "npm version patch && git push --follow-tags && npm publish",
-    "release:minor": "npm version minor && git push --follow-tags && npm publish",
-    "release:major": "npm version major && git push --follow-tags && npm publish"
+    "build": "pnpm --filter ./packages/* run build",
+    "build:core": "pnpm --filter @thermal-print/core run build",
+    "build:escpos": "pnpm --filter @thermal-print/escpos run build",
+    "build:react": "pnpm --filter @thermal-print/react run build",
+    "build:pdf": "pnpm --filter @thermal-print/pdf run build",
+    "clean": "pnpm --filter ./packages/* exec rm -rf dist *.tsbuildinfo",
+    "dev": "pnpm --filter ./packages/* run build:watch",
+    "test": "echo \"No tests configured yet\" && exit 0",
+    "publish:core": "pnpm --filter @thermal-print/core publish --access public",
+    "publish:escpos": "pnpm --filter @thermal-print/escpos publish --access public",
+    "publish:react": "pnpm --filter @thermal-print/react publish --access public",
+    "publish:pdf": "pnpm --filter @thermal-print/pdf publish --access public",
+    "publish:all": "pnpm --filter ./packages/* publish --access public",
+    "version:patch": "pnpm --filter ./packages/* exec pnpm version patch",
+    "version:minor": "pnpm --filter ./packages/* exec pnpm version minor",
+    "version:major": "pnpm --filter ./packages/* exec pnpm version major"
   },
   "keywords": [
-    "escpos",
     "thermal-printer",
-    "receipt",
-    "pos",
+    "escpos",
     "react",
-    "react-pdf",
-    "printer",
-    "thermal",
-    "ticket",
-    "receipt-printer",
-    "pos-printer",
-    "cp860",
-    "portuguese"
+    "monorepo"
   ],
   "author": "Gabriel Martinusso",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gmartinu/react-escpos.git"
+    "url": "git+https://github.com/gmartinu/thermal-print.git"
   },
   "bugs": {
-    "url": "https://github.com/gmartinu/react-escpos/issues"
+    "url": "https://github.com/gmartinu/thermal-print/issues"
   },
-  "homepage": "https://github.com/gmartinu/react-escpos#readme",
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org"
-  },
-  "peerDependencies": {
-    "@react-pdf/renderer": "^3.0.0",
-    "react": "^16.8.0 || ^17.0.0 || ^18.0.0"
-  },
-  "dependencies": {
-    "jimp": "^1.6.0",
-    "react-test-renderer": "^18.2.0"
-  },
+  "homepage": "https://github.com/gmartinu/thermal-print#readme",
   "devDependencies": {
     "@types/jimp": "^0.2.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.4",
-    "@types/react-test-renderer": "^19.1.0",
+    "@types/react-reconciler": "^0.28.0",
     "serialport": "^13.0.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   },
+  "dependencies": {
+    "jimp": "^1.6.0",
+    "react": "^18.3.1",
+    "react-reconciler": "^0.29.2"
+  },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=14.0.0",
+    "pnpm": ">=8.0.0"
   }
 }

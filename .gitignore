@@ -37,3 +37,7 @@ utils.md
 # Tester
 print-to-com4.tsx
 *.bin
+
+
+# Claude
+.claude

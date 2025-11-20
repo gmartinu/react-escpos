@@ -5,8 +5,8 @@
  */
 
 import React from 'react';
-import { Document, Page, View, Text } from '@react-pdf/renderer';
-import { convertToESCPOS } from 'react-escpos';
+import { Document, Page, View, Text, StyleSheet } from '@thermal-print/react';
+import { convertToESCPOS } from '@thermal-print/react';
 import fs from 'fs';
 
 // Define receipt data interface

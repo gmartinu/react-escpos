@@ -1,0 +1,32 @@
+{
+  "name": "@thermal-print/pdf",
+  "version": "0.1.0",
+  "description": "Framework-agnostic PDF generation from DOM elements for thermal printer output",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "build:watch": "tsc --build --watch"
+  },
+  "keywords": [
+    "thermal-printer",
+    "pdf",
+    "html2canvas",
+    "jspdf",
+    "receipt-printer",
+    "browser"
+  ],
+  "author": "Gabriel Martinusso",
+  "license": "MIT",
+  "dependencies": {
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}
